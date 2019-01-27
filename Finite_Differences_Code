@@ -1,0 +1,166 @@
+Option Explicit
+
+Public Sub StartTestButton_Click()
+    'Runs the Run_Tester sub below.
+    Run_Tester
+End Sub
+
+
+Public Sub Run_Tester()
+    Dim a As Integer, b As Integer, intDegree As Integer, intCoeff As Integer, intStartX As Integer, i As Integer, j As Integer, intColumnCount As Integer
+    Dim ansA As VbMsgBoxResult
+    
+    'Deletes all previous work to restart.
+    If Len(Sheet1.Cells(1, 1)) > 0 Then
+        Reset_Table
+    End If
+    
+    'Asks for the degree.
+ReDegree:
+    a = InputBox("What Degree would you like to test?", "Finite Difference Tester")
+    If ((Len(a) = 0) Or (Not IsNumeric(a)) Or ((IsNumeric(a)) And (Int(a) <> a))) Then
+        ansA = MsgBox("Please enter an integer value for the Degree.", vbOKOnly, "Finite Difference Tester")
+        GoTo ReDegree
+    End If
+    'Asks for the leading coefficient.
+ReCoeff:
+    b = InputBox("What value for the Leading Coefficient would you like to test?", "Finite Difference Tester")
+    If ((Len(b) = 0) Or (Not IsNumeric(b)) Or ((IsNumeric(b)) And (Int(b) <> b))) Then
+        ansA = MsgBox("Please enter an integer value for the Leading Coefficient.", vbOKOnly, "Finite Difference Tester")
+        GoTo ReCoeff
+    End If
+    'Asks if the leading coefficient should be negative.
+ReNeg:
+    ansA = MsgBox("Would you like the Leading Coefficient to be negative?", vbYesNo, "Finite Difference Tester")
+    intDegree = Abs(a)
+    intCoeff = Abs(b)
+    If ansA = vbYes Then
+        'If Yes was selected for the leading coefficient to be negative, multiplies the value assigned by negative one.
+        intCoeff = -1 * intCoeff
+    ElseIf ansA <> vbNo Then
+        ansA = MsgBox("Please select either 'Yes' or 'No' for whether or not the leading coefficient is negative.", vbOKOnly, "Finite Difference Tester")
+        GoTo ReNeg:
+    End If
+    'Assigns the starting value so that there are as few larger integers as possible, having zero around the center of the X Values.
+    intStartX = Int(intDegree / 2)
+    For i = 1 To intDegree + 1
+        Sheet1.Cells(i, 1) = intStartX + 1 - i
+        Sheet1.Cells(i, 2) = intCoeff * (intStartX + 1 - i) ^ intDegree + 1
+        'Assigns the X and Y values to the table.
+    Next i
+    For i = 3 To intDegree + 3
+        For j = 1 To intDegree + 3 - i
+            'Runs through the table and does the difference calculations starting from the Y values.
+            Sheet1.Cells(j, i) = Sheet1.Cells(j, i - 1) - Sheet1.Cells(j + 1, i - 1)
+        Next j
+    Next i
+    'The rest of the code, not calling for other functions is for building the title of the columns.
+    Sheet1.Rows(1).EntireRow.Insert
+    Sheet1.Cells(1, 1) = "X Value"
+    Sheet1.Cells(1, 2) = "Y Value"
+    For i = 3 To intDegree + 2
+        If i Mod 10 = 3 And i Mod 100 <> 13 Then
+            Cells(1, i) = CStr(i - 2) & "st Difference"
+        ElseIf i Mod 10 = 4 And i Mod 100 <> 14 Then
+            Cells(1, i) = CStr(i - 2) & "nd Difference"
+        ElseIf i Mod 10 = 5 And i Mod 100 <> 15 Then
+            Cells(1, i) = CStr(i - 2) & "rd Difference"
+        Else:
+            Cells(1, i) = CStr(i - 2) & "th Difference"
+        End If
+    Next i
+    'Calls the sub to format the table with the difference calculations as well as X and Y values.
+    Format_Table
+    'Calls the sub to calculate and place the inputs into the table.
+    Insert_Inputs
+    'Moves the button to the end of the column with difference calculations.
+    Move_Button
+End Sub
+
+Public Sub Format_Table()
+    Dim intRowCount As Integer, intColumnCount As Integer, i As Integer, j As Integer
+    Dim rng As Range
+    
+    intRowCount = Sheet1.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    intColumnCount = Sheet1.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    Set rng = Sheet1.Range(Cells(1, 1), Cells(intRowCount, intColumnCount))
+    rng.HorizontalAlignment = xlHAlignCenter
+    With rng.Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+    End With
+    rng.BorderAround LineStyle:=xlContinuous, Weight:=xlThick
+    Set rng = Sheet1.Range(Cells(1, 1), Cells(1, intColumnCount))
+    With rng
+        .BorderAround LineStyle:=xlContinuous, Weight:=xlThick
+        .Font.FontStyle = "Bold"
+    End With
+    Sheet1.Columns.AutoFit
+    For i = 1 To intRowCount
+        For j = 1 To intColumnCount
+            If Len(Sheet1.Cells(i, j)) = 0 Then
+                Sheet1.Cells(i, j).Interior.Color = RGB(0, 0, 0)
+            End If
+        Next j
+    Next i
+End Sub
+
+Public Sub Insert_Inputs()
+    Dim intRowCount As Integer, intColumnCount As Integer
+    Dim rng As Range
+    
+    intRowCount = Sheet1.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    intColumnCount = Sheet1.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    Sheet1.Cells(intRowCount + 2, 1) = "Degree"
+    Sheet1.Cells(intRowCount + 3, 1) = "Leading Coefficent"
+    'Calculates the degree by finding the number of differences.
+    Sheet1.Cells(intRowCount + 2, 2) = intColumnCount - 2
+    'Calculates the leading coefficient by dividing the constant final difference by the factorial of the degree.
+    Sheet1.Cells(intRowCount + 3, 2) = Sheet1.Cells(2, intColumnCount) / Factorial(intColumnCount - 2)
+    
+    Set rng = Sheet1.Range(Cells(intRowCount + 2, 1), Cells(intRowCount + 3, 1))
+    With rng
+        .HorizontalAlignment = xlHAlignRight
+        .Font.FontStyle = "Bold"
+        .Borders.LineStyle = xlContinuous
+        .Borders.Weight = xlThin
+    End With
+    
+    Set rng = Sheet1.Range(Cells(intRowCount + 2, 2), Cells(intRowCount + 3, 2))
+    With rng
+        .HorizontalAlignment = xlHAlignLeft
+        .Borders.LineStyle = xlContinuous
+        .Borders.Weight = xlThin
+    End With
+    
+    Sheet1.Range(Cells(intRowCount + 2, 1), Cells(intRowCount + 3, 2)).BorderAround LineStyle:=xlContinuous, Weight:=xlThick
+    
+    Sheet1.Columns.AutoFit
+End Sub
+
+Public Sub Move_Button()
+    Dim intColumnCount As Integer
+    
+    intColumnCount = Sheet1.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    Me.StartTestButton.Left = Sheet1.Columns(intColumnCount + 1).Left + 2
+    Me.StartTestButton.Top = 0
+End Sub
+
+Public Sub Reset_Table()
+    Dim intColumnCount As Integer, i As Integer
+    
+    intColumnCount = Sheet1.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    For i = 1 To intColumnCount
+        Sheet1.Columns(1).EntireColumn.Delete
+    Next i
+End Sub
+
+Public Function Factorial(intInput As Integer)
+    Dim i As Integer, intTemp As Variant
+    
+    intTemp = 1
+    For i = 1 To intInput
+        intTemp = intTemp * i
+    Next i
+    Factorial = intTemp
+End Function
